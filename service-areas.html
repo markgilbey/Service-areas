@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service Areas | Northern Virginia Cleaning</title>
+
+<!-- Fonts (optional: remove if your site already loads its own) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+
+<style>
+/* ==========================================================
+   SERVICE AREAS SECTION
+   Everything is scoped under #service-areas so it can be
+   dropped into an existing site without style collisions.
+   ========================================================== */
+#service-areas {
+  --sa-ink: #141617;
+  --sa-primary: #002084;
+  --sa-primary-dark: #001763;
+  --sa-primary-tint: rgba(0, 32, 132, 0.08);
+  --sa-mist: #F2F4F8;
+  --sa-line: #D9DEE7;
+  --sa-muted: #525C6B;
+  --sa-white: #FFFFFF;
+  --sa-radius-btn: 8px;
+  --sa-radius-card: 14px;
+  --sa-font-head: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --sa-font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  font-family: var(--sa-font-body);
+  color: var(--sa-ink);
+  background: #F2F3F5;
+  padding: 80px 24px;
+  line-height: 1.5;
+}
+#service-areas *, #service-areas *::before, #service-areas *::after { box-sizing: border-box; }
+
+.sa-container { max-width: 1280px; margin: 0 auto; }
+
+/* ---------- Header ---------- */
+.sa-header { max-width: 760px; margin-bottom: 40px; }
+.sa-title {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  font-size: 40px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #002084;
+  margin: 0 0 18px;
+  max-width: 20ch;
+}
+.sa-intro {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #141617;
+  margin: 0;
+  max-width: 62ch;
+}
+
+/* ---------- Split panel ---------- */
+.sa-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  height: 640px;
+  background: var(--sa-white);
+  border: 1px solid var(--sa-line);
+  border-radius: var(--sa-radius-card);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(20, 22, 23, 0.06);
+}
+
+/* Map */
+.sa-map-wrap { position: relative; border-right: 1px solid var(--sa-line); }
+.sa-map { position: absolute; inset: 0; background: #E9ECF1; }
+.sa-map-hint {
+  position: absolute; left: 12px; bottom: 12px; z-index: 500;
+  background: rgba(255,255,255,0.94);
+  border: 1px solid var(--sa-line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.8125rem;
+  color: var(--sa-muted);
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.sa-map-hint.is-hidden { opacity: 0; }
+
+/* Custom map pins */
+.sa-pin {
+  display: block; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--sa-primary);
+  border: 3px solid var(--sa-white);
+  box-shadow: 0 1px 4px rgba(20, 22, 23, 0.35);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.sa-pin.is-hover { transform: scale(1.35); }
+.sa-pin.is-active { background: var(--sa-ink); transform: scale(1.55); }
+
+#service-areas .leaflet-popup-content-wrapper { border-radius: 10px; box-shadow: 0 6px 20px rgba(20,22,23,0.18); }
+#service-areas .leaflet-popup-content { margin: 12px 16px; font-family: var(--sa-font-body); }
+.sa-popup-name { font-weight: 600; font-size: 0.975rem; color: var(--sa-ink); margin: 0 0 4px; }
+.sa-popup-link { color: var(--sa-primary); font-weight: 500; text-decoration: none; font-size: 0.875rem; }
+.sa-popup-link:hover { text-decoration: underline; }
+
+/* Right column */
+.sa-side { display: flex; flex-direction: column; min-height: 0; }
+.sa-toolbar { padding: 20px 20px 14px; border-bottom: 1px solid var(--sa-line); }
+.sa-search-row { display: flex; gap: 10px; }
+
+.sa-search { position: relative; flex: 1; min-width: 0; }
+.sa-search svg {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; color: var(--sa-muted); pointer-events: none;
+}
+.sa-search input {
+  width: 100%; height: 48px;
+  padding: 0 14px 0 42px;
+  font: inherit; font-size: 1rem; color: var(--sa-ink);
+  background: var(--sa-white);
+  border: 1.5px solid var(--sa-line);
+  border-radius: var(--sa-radius-btn);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.sa-search input::placeholder { color: #7A828F; }
+.sa-search input:focus { outline: none; border-color: var(--sa-primary); box-shadow: 0 0 0 3px var(--sa-primary-tint); }
+
+.sa-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 48px; padding: 0 20px;
+  font: inherit; font-size: 0.975rem; font-weight: 600; white-space: nowrap;
+  color: var(--sa-white); background: var(--sa-primary);
+  border: 0; border-radius: var(--sa-radius-btn);
+  text-decoration: none; cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 32, 132, 0.25);
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.sa-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.sa-btn:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(0,32,132,0.2); }
+@media (hover: hover) {
+  .sa-btn:hover { background: var(--sa-primary-dark); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,32,132,0.35); }
+}
+
+/* Region filter chips */
+.sa-chips {
+  display: flex; gap: 6px; margin-top: 12px;
+  overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+}
+.sa-chips::-webkit-scrollbar { display: none; }
+.sa-chip {
+  flex-shrink: 0; height: 34px; padding: 0 13px;
+  font: inherit; font-size: 0.875rem; font-weight: 500; color: var(--sa-ink);
+  background: var(--sa-white);
+  border: 1px solid var(--sa-line); border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.sa-chip[aria-pressed="true"] { background: var(--sa-ink); border-color: var(--sa-ink); color: var(--sa-white); }
+@media (hover: hover) { .sa-chip:hover:not([aria-pressed="true"]) { border-color: var(--sa-primary); } }
+
+.sa-status { margin: 12px 0 0; font-size: 0.8125rem; color: var(--sa-muted); }
+
+/* Location list */
+.sa-list { flex: 1; overflow-y: auto; padding: 8px 20px 24px; overscroll-behavior: contain; }
+.sa-group { padding-top: 16px; }
+.sa-group[hidden] { display: none; }
+.sa-group-title {
+  font-size: 0.8125rem; font-weight: 600; color: var(--sa-muted);
+  margin: 0 0 8px; display: flex; align-items: center; gap: 8px;
+}
+.sa-group-title span { font-weight: 500; opacity: 0.8; }
+.sa-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px;
+}
+.sa-grid li[hidden] { display: none; }
+.sa-loc {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  min-height: 44px; padding: 8px 12px;
+  font: inherit; font-size: 0.9375rem; text-align: left; color: var(--sa-ink);
+  background: var(--sa-mist);
+  border: 1px solid transparent; border-radius: var(--sa-radius-btn);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.sa-loc::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--sa-primary); flex-shrink: 0;
+}
+.sa-loc-state { color: var(--sa-muted); font-size: 0.8125rem; margin-left: auto; }
+@media (hover: hover) { .sa-loc:hover { background: var(--sa-white); border-color: var(--sa-line); } }
+.sa-loc.is-active { background: var(--sa-primary-tint); border-color: var(--sa-primary); font-weight: 600; }
+.sa-loc.is-active::before { background: var(--sa-ink); }
+
+/* Empty state */
+.sa-empty { padding: 36px 8px; text-align: center; }
+.sa-empty[hidden] { display: none; }
+.sa-empty h3 { font-family: var(--sa-font-head); font-size: 1.25rem; margin: 0 0 8px; }
+.sa-empty p { color: var(--sa-muted); margin: 0 auto 18px; max-width: 34ch; }
+
+/* Focus: always visible for keyboard users */
+#service-areas button:focus-visible,
+#service-areas a:focus-visible { outline: 3px solid var(--sa-primary); outline-offset: 2px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  #service-areas { padding: 56px 20px; }
+  .sa-header { margin-bottom: 28px; }
+  .sa-panel { grid-template-columns: 1fr; height: auto; }
+  .sa-map-wrap { height: 320px; border-right: 0; border-bottom: 1px solid var(--sa-line); }
+  .sa-list { max-height: 540px; }
+}
+@media (max-width: 520px) {
+  .sa-search-row { flex-direction: column; }
+  .sa-btn { width: 100%; }
+  .sa-toolbar { padding: 16px 16px 12px; }
+  .sa-list { padding: 4px 16px 20px; }
+  .sa-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #service-areas * { transition: none !important; }
+}
+</style>
+</head>
+<body style="margin:0">
+
+<section id="service-areas" aria-labelledby="sa-title">
+  <div class="sa-container">
+
+    <header class="sa-header">
+      <h2 id="sa-title" class="sa-title">Serving Springfield and Across Northern Virginia</h2>
+      <p class="sa-intro">We have been providing professional cleaning services since 2008. Here is the list of cities, towns, and major neighborhoods across Northern Virginia we serve. If you don't find your location, feel free to call us to see if we can reach your area.</p>
+    </header>
+
+    <div class="sa-panel">
+      <!-- Map -->
+      <div class="sa-map-wrap">
+        <div id="sa-map" class="sa-map" role="region" aria-label="Map of our service areas in Northern Virginia"></div>
+        <div class="sa-map-hint" id="sa-map-hint">Click the map to zoom with your scroll wheel</div>
+      </div>
+
+      <!-- Search + list -->
+      <div class="sa-side">
+        <div class="sa-toolbar">
+          <div class="sa-search-row">
+            <div class="sa-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <label for="sa-search-input" class="sa-visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Search your city or neighborhood</label>
+              <input id="sa-search-input" type="search" placeholder="Search your city or neighborhood" autocomplete="off">
+            </div>
+          </div>
+          <div class="sa-chips" id="sa-chips" role="group" aria-label="Filter by region"></div>
+          <p class="sa-status" id="sa-status" aria-live="polite"></p>
+        </div>
+
+        <div class="sa-list" id="sa-list">
+          <div class="sa-empty" id="sa-empty" hidden>
+            <h3>No match on our list yet</h3>
+            <p>We may still be able to reach you. Give us a call and we'll check your address.</p>
+            <a class="sa-btn" data-phone-link href="tel:+17035550123">Call <span data-phone-text>(703) 555-0123</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  /* ======================================================
+     1. CONFIG: replace with your real phone number
+     ====================================================== */
+  var CONFIG = {
+    phoneDisplay: '(703) 555-0123',
+    phoneTel: '+17035550123'
+  };
+
+  /* ======================================================
+     2. DATA: regions + 42 areas [label, region, lat, lng, aliases]
+     Aliases help people find a place under a different spelling.
+     ====================================================== */
+  var REGIONS = [
+    { id: 'fairfax',    chip: 'Fairfax',        name: 'Springfield & Fairfax County' },
+    { id: 'alexandria', chip: 'Alexandria',     name: 'Alexandria & Mount Vernon' },
+    { id: 'arlington',  chip: 'Arlington',      name: 'Arlington' },
+    { id: 'tysons',     chip: 'Tysons & Vienna', name: 'Tysons, McLean & Vienna' },
+    { id: 'reston',     chip: 'Reston & Dulles', name: 'Reston, Herndon & Dulles' },
+    { id: 'loudoun',    chip: 'Loudoun',        name: 'Loudoun County' },
+    { id: 'pw',         chip: 'Prince William', name: 'Prince William County' }
+  ];
+
+  var AREAS = [
+    ['Springfield, VA',      'fairfax', 38.7893, -77.1872],
+    ['West Springfield, VA', 'fairfax', 38.7843, -77.2211],
+    ['Burke, VA',            'fairfax', 38.7935, -77.2717],
+    ['Annandale, VA',        'fairfax', 38.8304, -77.1964],
+    ['Newington, VA',        'fairfax', 38.7384, -77.1850],
+    ['Fairfax Station, VA',  'fairfax', 38.8009, -77.3255],
+    ['Clifton, VA',          'fairfax', 38.7804, -77.3869],
+    ['Centerville, VA',      'fairfax', 38.8425, -77.4265, 'centreville'],
+    ['Alexandria, VA',       'alexandria', 38.8187, -77.0861],
+    ['Old Town, VA',         'alexandria', 38.8048, -77.0434, 'old town alexandria'],
+    ['Kingstowne, VA',       'alexandria', 38.7710, -77.1400],
+    ['Cameron Station, VA',  'alexandria', 38.8030, -77.1110],
+    ['Del Ray, VA',          'alexandria', 38.8270, -77.0580],
+    ['Mt Vernon, VA',        'alexandria', 38.7190, -77.1070, 'mount vernon'],
+    ['Arlington, VA',        'arlington', 38.8740, -77.1050],
+    ['Rosslyn, VA',          'arlington', 38.8966, -77.0716],
+    ['Clarendon, VA',        'arlington', 38.8868, -77.0953],
+    ['Ballston, VA',         'arlington', 38.8821, -77.1113],
+    ['Farlington, VA',       'arlington', 38.8340, -77.0850, 'fairlington'],
+    ['Mclean, VA',           'tysons', 38.9339, -77.1773, 'mc lean'],
+    ['Vienna, VA',           'tysons', 38.9012, -77.2653],
+    ['Tysons Corner, VA',    'tysons', 38.9187, -77.2311, 'tysons'],
+    ['Dunn Loring, VA',      'tysons', 38.8934, -77.2217],
+    ['Oakton, VA',           'tysons', 38.8810, -77.3008],
+    ['Falls Church, VA',     'tysons', 38.8823, -77.1711],
+    ['Loudoun, VA',          'loudoun', 39.0900, -77.5500, 'loudoun county leesburg'],
+    ['Ashburn, VA',          'loudoun', 39.0438, -77.4874],
+    ['Southridings, VA',     'loudoun', 38.9209, -77.5039, 'south riding'],
+    ['Aldie, VA',            'loudoun', 38.9757, -77.6414],
+    ['Broadlands, VA',       'loudoun', 39.0184, -77.5205],
+    ['Dulles, VA',           'reston', 38.9531, -77.4565],
+    ['Reston, VA',           'reston', 38.9586, -77.3570],
+    ['Herndon, VA',          'reston', 38.9696, -77.3861],
+    ['Woodbridge, VA',       'pw', 38.6582, -77.2497],
+    ['Dumfries, VA',         'pw', 38.5676, -77.3280],
+    ['Montclair, VA',        'pw', 38.6093, -77.3397],
+    ['Lake Ridge, VA',       'pw', 38.6879, -77.2978],
+    ['Dale City, VA',        'pw', 38.6371, -77.3111],
+    ['Fairfax, VA',          'fairfax', 38.8530, -77.2990],
+    ['Fairfax City, VA',     'fairfax', 38.8462, -77.3064],
+    ['Centreville, VA',      'fairfax', 38.8404, -77.4289, 'centerville'],
+    ['Chantilly, VA',        'fairfax', 38.8943, -77.4311]
+  ];
+
+  /* ======================================================
+     3. SETUP
+     ====================================================== */
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var canHover = window.matchMedia('(hover: hover)').matches;
+
+  document.querySelectorAll('[data-phone-link]').forEach(function (a) { a.href = 'tel:' + CONFIG.phoneTel; });
+  document.querySelectorAll('[data-phone-text]').forEach(function (s) { s.textContent = CONFIG.phoneDisplay; });
+
+  function norm(s) {
+    return s.toLowerCase().replace(/,\s*va\b/g, '').replace(/[^a-z0-9 ]/g, ' ')
+            .replace(/\bmt\b/g, 'mount').replace(/\s+/g, ' ').trim();
+  }
+  function shortName(label) { return label.replace(/,\s*VA$/, ''); }
+
+  var regionById = {};
+  REGIONS.forEach(function (r) { regionById[r.id] = r; });
+
+  var areas = AREAS.map(function (a, i) {
+    var region = regionById[a[1]];
+    return {
+      id: i, label: a[0], name: shortName(a[0]), region: a[1],
+      latlng: [a[2], a[3]],
+      haystack: norm([a[0], a[4] || '', region.name].join(' '))
+    };
+  });
+
+  /* ---------- Map ---------- */
+  var map = L.map('sa-map', { scrollWheelZoom: false, zoomControl: false });
+  L.control.zoom({ position: 'topright' }).addTo(map);
+  // Free OpenStreetMap tiles: no API key or signup needed. Keep the attribution visible.
+  // OSM refuses tile requests that arrive without a Referer header (403 "Access blocked"),
+  // so we explicitly send one. If tiles still fail (local file, sandboxed page-builder
+  // embed, strict site privacy settings), we switch automatically to a backup free source.
+  function useOSM() {
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      referrerPolicy: 'strict-origin-when-cross-origin',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+  }
+  function useBackup() {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19, subdomains: 'abcd',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
+  }
+  // OSM's "Access blocked" tile is a normal image, so the browser can't tell it failed.
+  // Test one tile first and pick whichever source actually works on this page.
+  if (location.protocol === 'file:' || !window.fetch) {
+    useBackup();
+  } else {
+    fetch('https://tile.openstreetmap.org/10/292/391.png', { referrerPolicy: 'strict-origin-when-cross-origin', cache: 'no-store' })
+      .then(function (r) { if (r.ok) useOSM(); else useBackup(); })
+      .catch(useBackup);
+  }
+
+  // Only capture the scroll wheel after the visitor engages with the map
+  var hint = document.getElementById('sa-map-hint');
+  map.on('click focus', function () { map.scrollWheelZoom.enable(); hint.classList.add('is-hidden'); });
+  map.getContainer().addEventListener('mouseleave', function () { map.scrollWheelZoom.disable(); });
+  if (!canHover) hint.classList.add('is-hidden');
+
+  var markerLayer = L.featureGroup().addTo(map);
+  var pinIcon = L.divIcon({ className: '', html: '<span class="sa-pin"></span>', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -10] });
+
+  areas.forEach(function (area) {
+    var m = L.marker(area.latlng, { icon: pinIcon, title: area.label, riseOnHover: true });
+    m.bindPopup(
+      '<p class="sa-popup-name">' + area.label + '</p>' +
+      '<a class="sa-popup-link" href="tel:' + CONFIG.phoneTel + '">Call ' + CONFIG.phoneDisplay + '</a>',
+      { closeButton: false, autoPanPadding: [30, 30] }
+    );
+    m.on('click', function () { setActive(area, { fly: false, scroll: true }); });
+    m.addTo(markerLayer);
+    area.marker = m;
+  });
+
+  map.fitBounds(markerLayer.getBounds(), { padding: [30, 30] });
+
+  function pinEl(area) { var el = area.marker.getElement(); return el && el.querySelector('.sa-pin'); }
+
+  /* ---------- Chips ---------- */
+  var chipsEl = document.getElementById('sa-chips');
+  var activeRegion = 'all';
+  [{ id: 'all', chip: 'All areas' }].concat(REGIONS).forEach(function (r) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'sa-chip'; b.textContent = r.chip;
+    b.setAttribute('aria-pressed', r.id === 'all' ? 'true' : 'false');
+    b.addEventListener('click', function () {
+      activeRegion = r.id;
+      chipsEl.querySelectorAll('.sa-chip').forEach(function (c) { c.setAttribute('aria-pressed', c === b ? 'true' : 'false'); });
+      applyFilter(true);
+    });
+    chipsEl.appendChild(b);
+  });
+
+  /* ---------- List ---------- */
+  var listEl = document.getElementById('sa-list');
+  var emptyEl = document.getElementById('sa-empty');
+  var groups = {};
+
+  REGIONS.forEach(function (r) {
+    var members = areas.filter(function (a) { return a.region === r.id; })
+                       .sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var sec = document.createElement('div');
+    sec.className = 'sa-group';
+    sec.innerHTML = '<h3 class="sa-group-title">' + r.name + ' <span></span></h3><ul class="sa-grid"></ul>';
+    var ul = sec.querySelector('ul');
+
+    members.forEach(function (area) {
+      var li = document.createElement('li');
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'sa-loc';
+      btn.setAttribute('aria-label', area.label + ', show on map');
+      btn.innerHTML = '<span>' + area.name + '</span><span class="sa-loc-state">VA</span>';
+      btn.addEventListener('click', function () { setActive(area, { fly: true, scroll: false }); });
+      if (canHover) {
+        btn.addEventListener('mouseenter', function () { var p = pinEl(area); if (p) p.classList.add('is-hover'); });
+        btn.addEventListener('mouseleave', function () { var p = pinEl(area); if (p) p.classList.remove('is-hover'); });
+      }
+      li.appendChild(btn); ul.appendChild(li);
+      area.li = li; area.btn = btn;
+    });
+
+    listEl.insertBefore(sec, emptyEl);
+    groups[r.id] = { el: sec, count: sec.querySelector('.sa-group-title span'), members: members };
+  });
+
+  /* ---------- Active state ---------- */
+  var current = null;
+  function setActive(area, opts) {
+    if (current) {
+      current.btn.classList.remove('is-active');
+      var prev = pinEl(current); if (prev) prev.classList.remove('is-active');
+      current.marker.setZIndexOffset(0);
+    }
+    current = area;
+    area.btn.classList.add('is-active');
+    var p = pinEl(area); if (p) p.classList.add('is-active');
+    area.marker.setZIndexOffset(1000);
+
+    if (opts.fly) {
+      if (reduceMotion) map.setView(area.latlng, 13);
+      else map.flyTo(area.latlng, 13, { duration: 0.8 });
+      map.once('moveend', function () { area.marker.openPopup(); });
+    } else {
+      area.marker.openPopup();
+    }
+    if (opts.scroll) area.btn.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+  }
+
+  /* ---------- Filtering ---------- */
+  var searchInput = document.getElementById('sa-search-input');
+  var statusEl = document.getElementById('sa-status');
+  var fitTimer;
+
+  function applyFilter(refit) {
+    var q = norm(searchInput.value);
+    var visible = [];
+
+    areas.forEach(function (a) {
+      var show = (activeRegion === 'all' || a.region === activeRegion) && (!q || a.haystack.indexOf(q) !== -1);
+      a.li.hidden = !show;
+      if (show) { visible.push(a); if (!markerLayer.hasLayer(a.marker)) markerLayer.addLayer(a.marker); }
+      else if (markerLayer.hasLayer(a.marker)) markerLayer.removeLayer(a.marker);
+    });
+
+    Object.keys(groups).forEach(function (id) {
+      var n = groups[id].members.filter(function (a) { return !a.li.hidden; }).length;
+      groups[id].el.hidden = n === 0;
+      groups[id].count.textContent = n;
+    });
+
+    emptyEl.hidden = visible.length > 0;
+    statusEl.textContent = visible.length === areas.length
+      ? 'Showing all ' + areas.length + ' areas we serve'
+      : 'Showing ' + visible.length + ' of ' + areas.length + ' areas';
+
+    // Re-apply active styling (markers re-render when re-added)
+    if (current && !current.li.hidden) { var p = pinEl(current); if (p) p.classList.add('is-active'); }
+
+    if (refit && visible.length) {
+      clearTimeout(fitTimer);
+      fitTimer = setTimeout(function () {
+        var b = L.latLngBounds(visible.map(function (a) { return a.latlng; }));
+        var o = { padding: [40, 40], maxZoom: 12 };
+        if (reduceMotion) map.fitBounds(b, o); else map.flyToBounds(b, Object.assign({ duration: 0.6 }, o));
+      }, 250);
+    }
+  }
+
+  searchInput.addEventListener('input', function () { applyFilter(true); });
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { searchInput.value = ''; applyFilter(true); }
+    if (e.key === 'Enter') {
+      var first = areas.filter(function (a) { return !a.li.hidden; })[0];
+      if (first) setActive(first, { fly: true, scroll: true });
+    }
+  });
+
+  applyFilter(false);
+  window.addEventListener('load', function () { map.invalidateSize(); });
+})();
+</script>
+</body>
+</html>
